@@ -4,7 +4,7 @@ The code relies on the spikingjelly framwork for processing the neuromorphic dat
 
 pip install spikingjelly
 
-Directly training the original Izhikevich model results in poor performance, which is below 20% accuracy. The performance is improved by making some simplifications to the original model, which makes the network trainable.
+Directly training using the original Izhikevich model results in poor performance, which is below 20% accuracy. The performance is improved by making some simplifications to the original model, which makes the network trainable.
 
 #Training using LIF model
 
