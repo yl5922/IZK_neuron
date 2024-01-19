@@ -159,43 +159,6 @@ class IZKNet(nn.Module):
 
 def main():
     # python classify_dvsg.py -data_dir ./DVS128Gesture -out_dir ./logs -amp -opt Adam -device cuda:0 -lr_scheduler CosALR -T_max 64 -cupy -epochs 1024 -IZK
-    '''
-    .. code:: bash
-
-        usage: classify_dvsg.py [-h] [-T T] [-device DEVICE] [-b B] [-epochs N] [-j N] [-channels CHANNELS] [-data_dir DATA_DIR] [-out_dir OUT_DIR] [-resume RESUME] [-amp] [-cupy] [-opt OPT] [-lr LR] [-momentum MOMENTUM] [-lr_scheduler LR_SCHEDULER] [-step_size STEP_SIZE] [-gamma GAMMA] [-T_max T_MAX]
-
-        Classify DVS128 Gesture
-
-        optional arguments:
-          -h, --help            show this help message and exit
-          -T T                  simulating time-steps
-          -device DEVICE        device
-          -b B                  batch size
-          -epochs N             number of total epochs to run
-          -j N                  number of data loading workers (default: 4)
-          -channels CHANNELS    channels of Conv2d in SNN
-          -data_dir DATA_DIR    root dir of DVS128 Gesture dataset
-          -out_dir OUT_DIR      root dir for saving logs and checkpoint
-          -resume RESUME        resume from the checkpoint path
-          -amp                  automatic mixed precision training
-          -cupy                 use CUDA neuron and multi-step forward mode
-          -opt OPT              use which optimizer. SDG or Adam
-          -lr LR                learning rate
-          -momentum MOMENTUM    momentum for SGD
-          -lr_scheduler LR_SCHEDULER
-                                use which schedule. StepLR or CosALR
-          -step_size STEP_SIZE  step_size for StepLR
-          -gamma GAMMA          gamma for StepLR
-          -T_max T_MAX          T_max for CosineAnnealingLR
-
-    Running Example:
-
-    .. code:: bash
-
-        python -m spikingjelly.clock_driven.examples.classify_dvsg -data_dir /userhome/datasets/DVS128Gesture -out_dir ./logs -amp -opt Adam -device cuda:0 -lr_scheduler CosALR -T_max 64 -cupy -epochs 1024
-
-    See the tutorial :doc:`./clock_driven_en/14_classify_dvsg` for more details.
-    '''
     parser = argparse.ArgumentParser(description='Classify DVS128 Gesture')
     parser.add_argument('-T', default=16, type=int, help='simulating time-steps')
     parser.add_argument('-device', default='cuda:0', help='device')
