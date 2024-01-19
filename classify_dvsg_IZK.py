@@ -102,13 +102,13 @@ class PythonNet(nn.Module):
 
 
 class IZKNet(nn.Module):
-    def __init__(self, channels: int, hidden_num=800):
+    def __init__(self, channels: int, hidden_num=800, simplified = False):
         super().__init__()
         conv = []
-        conv.extend(PythonNet.conv3x3(2, channels))
+        conv.extend(IZKNet.conv3x3(2, channels, simplified))
         conv.append(nn.MaxPool2d(2, 2))
         for i in range(4):
-            conv.extend(PythonNet.conv3x3(channels, channels))
+            conv.extend(IZKNet.conv3x3(channels, channels, simplified))
             conv.append(nn.MaxPool2d(2, 2))
         conv.append(nn.Flatten())
         self.conv = nn.Sequential(*conv)
@@ -116,14 +116,14 @@ class IZKNet(nn.Module):
         self.fc1 = nn.Sequential(
             layer.Dropout(0.5),
             nn.Linear(channels * 4 * 4, hidden_num, bias=False),
-            IZK_neuron(surrogate_function=surrogate.ATan(), detach_reset=True),
+            IZK_neuron(simplified= simplified, surrogate_function=surrogate.ATan(), detach_reset=True),
             nn.Flatten()
         )
 
         self.fc2 = nn.Sequential(
             layer.Dropout(0.5),
             nn.Linear(hidden_num, 110, bias=False),
-            IZK_neuron(surrogate_function=surrogate.ATan(), detach_reset=True),
+            IZK_neuron(simplified= simplified, surrogate_function=surrogate.ATan(), detach_reset=True),
             nn.Flatten()
         )
 
@@ -150,14 +150,52 @@ class IZKNet(nn.Module):
         return out_spikes / x.shape[0], spk_rec
 
     @staticmethod
-    def conv3x3(in_channels: int, out_channels):
+    def conv3x3(in_channels: int, out_channels, simplified):
         return [
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            IZK_neuron(surrogate_function=surrogate.ATan(), detach_reset=True),
+            IZK_neuron(simplified= simplified, surrogate_function=surrogate.ATan(), detach_reset=True),
         ]
 
 def main():
+    # python classify_dvsg.py -data_dir ./DVS128Gesture -out_dir ./logs -amp -opt Adam -device cuda:0 -lr_scheduler CosALR -T_max 64 -cupy -epochs 1024 -IZK
+    '''
+    .. code:: bash
+
+        usage: classify_dvsg.py [-h] [-T T] [-device DEVICE] [-b B] [-epochs N] [-j N] [-channels CHANNELS] [-data_dir DATA_DIR] [-out_dir OUT_DIR] [-resume RESUME] [-amp] [-cupy] [-opt OPT] [-lr LR] [-momentum MOMENTUM] [-lr_scheduler LR_SCHEDULER] [-step_size STEP_SIZE] [-gamma GAMMA] [-T_max T_MAX]
+
+        Classify DVS128 Gesture
+
+        optional arguments:
+          -h, --help            show this help message and exit
+          -T T                  simulating time-steps
+          -device DEVICE        device
+          -b B                  batch size
+          -epochs N             number of total epochs to run
+          -j N                  number of data loading workers (default: 4)
+          -channels CHANNELS    channels of Conv2d in SNN
+          -data_dir DATA_DIR    root dir of DVS128 Gesture dataset
+          -out_dir OUT_DIR      root dir for saving logs and checkpoint
+          -resume RESUME        resume from the checkpoint path
+          -amp                  automatic mixed precision training
+          -cupy                 use CUDA neuron and multi-step forward mode
+          -opt OPT              use which optimizer. SDG or Adam
+          -lr LR                learning rate
+          -momentum MOMENTUM    momentum for SGD
+          -lr_scheduler LR_SCHEDULER
+                                use which schedule. StepLR or CosALR
+          -step_size STEP_SIZE  step_size for StepLR
+          -gamma GAMMA          gamma for StepLR
+          -T_max T_MAX          T_max for CosineAnnealingLR
+
+    Running Example:
+
+    .. code:: bash
+
+        python -m spikingjelly.clock_driven.examples.classify_dvsg -data_dir /userhome/datasets/DVS128Gesture -out_dir ./logs -amp -opt Adam -device cuda:0 -lr_scheduler CosALR -T_max 64 -cupy -epochs 1024
+
+    See the tutorial :doc:`./clock_driven_en/14_classify_dvsg` for more details.
+    '''
     parser = argparse.ArgumentParser(description='Classify DVS128 Gesture')
     parser.add_argument('-T', default=16, type=int, help='simulating time-steps')
     parser.add_argument('-device', default='cuda:0', help='device')
@@ -185,8 +223,8 @@ def main():
     parser.add_argument('-gamma', default=0.1, type=float, help='gamma for StepLR')
     parser.add_argument('-T_max', default=32, type=int, help='T_max for CosineAnnealingLR')
     parser.add_argument('-hidden_num', default=800, type=int, help='T_max for CosineAnnealingLR')
-    parser.add_argument('-IZK', default=True, help='Use IZK neurons')
-
+    parser.add_argument('-IZK', action='store_true', default=True, help='Use IZK neurons, if false, use the LIF model')
+    parser.add_argument('-simplified', action='store_true', default=True, help='Use simplified IZK neurons, which will significantly enhance the performance')
 
     args = parser.parse_args()
     print(args)
@@ -199,15 +237,12 @@ def main():
             pass
         else:
             if args.IZK:
-                net = IZKNet(channels=args.channels, hidden_num=args.hidden_num)
+                net = IZKNet(channels=args.channels, hidden_num=args.hidden_num, simplified=args.simplified)
             else:
                 net = PythonNet(channels=args.channels, hidden_num=args.hidden_num)
         print(net)
         net.to(args.device)
-    
-    
-    
-    
+
         optimizer = None
         if args.opt == 'SGD':
             optimizer = torch.optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=1e-4)
