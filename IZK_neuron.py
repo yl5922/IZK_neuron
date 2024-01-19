@@ -3,7 +3,7 @@ from typing import Callable, overload
 import torch
 import torch.nn as nn
 class IZK_neuron(nn.Module):
-    def __init__(self, v_threshold: float = -4.,
+    def __init__(self, simplified = False, v_threshold: float = -4.,
                  v_reset: float = -6.5, surrogate_function: Callable = surrogate.Sigmoid(),
                  detach_reset: bool = False):
         super().__init__()
@@ -16,10 +16,12 @@ class IZK_neuron(nn.Module):
         self.v_threshold = v_threshold
         self.v_reset = v_reset
         self.surrogate_function = surrogate_function
+        self.simplified = simplified
 
     def neuronal_charge(self, x: torch.Tensor):
-        # self.v = self.v + 1 * (0.4 * self.v ** 2 + 5 * self.v + 14 - self.mu + x)
-        # self.mu = self.mu + self.a*(self.b*self.v - self.mu)
+        self.v = self.v + 1 * (0.4 * self.v ** 2 + 5 * self.v + 14 - self.mu + x)
+        if not self.simplified:
+            self.mu = self.mu + self.a*(self.b*self.v.detach() - self.mu)
 
         #conditional IZK
         # flag = self.v < -7.76
@@ -29,7 +31,7 @@ class IZK_neuron(nn.Module):
         # self.v = tmp_posi
         #self.mu = self.mu + self.a * (self.b * self.v - self.mu)
         #LIF
-        self.v = self.v - (self.v - self.v_reset) / 2 + x
+        # self.v = self.v - (self.v - self.v_reset) / 2 + x
 
     def neuronal_fire(self):
         return self.surrogate_function(self.v - self.v_threshold)
@@ -44,7 +46,8 @@ class IZK_neuron(nn.Module):
         else:
             # hard reset
             self.v = (1. - spike_d) * self.v + spike_d * self.v_reset
-            #self.mu = self.mu + self.d/10
+            if not self.simplified:
+                self.mu = self.mu.detach() + self.d/10
 
     def forward(self, x):
         self.initialize(x)
@@ -64,6 +67,5 @@ class IZK_neuron(nn.Module):
     def reset(self):
         self.v = self.c
         self.mu = self.b * self.c
-
 
 
