@@ -3,7 +3,7 @@ from typing import Callable, overload
 import torch
 import torch.nn as nn
 class IZK_neuron(nn.Module):
-    def __init__(self, simplified = False, v_threshold: float = -4.,
+    def __init__(self, simplified = False, v_threshold: float = -5.,
                  v_reset: float = -6.5, surrogate_function: Callable = surrogate.Sigmoid(),
                  detach_reset: bool = False):
         super().__init__()
